@@ -1,0 +1,48 @@
+{
+    "manifest_version": 2,
+    "name": "StudyLock",
+    "version": "1.0.0",
+    "description": "Lock distracting websites during your study sessions. Stay focused, stay productive.",
+    "author": "StudyLock Team",
+    "icons": {
+        "128": "icons/icon128.png"
+    },
+    "permissions": [
+        "tabs",
+        "webRequest",
+        "webRequestBlocking",
+        "storage",
+        "alarms",
+        "notifications",
+        "<all_urls>"
+    ],
+    "background": {
+        "scripts": [
+            "background.js"
+        ],
+        "persistent": true
+    },
+    "browser_action": {
+        "default_icon": "icons/icon128.png",
+        "default_title": "StudyLock",
+        "default_popup": "popup.html"
+    },
+    "web_accessible_resources": [
+        "blocked.html",
+        "settings.html",
+        "dashboard.html",
+        "icons/*.png"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "studylock@extension.firefox",
+            "strict_min_version": "57.0"
+        },
+        "android": {
+            "strict_min_version": "57.0"
+        },
+        "gecko_android": {
+            "strict_min_version": "57.0"
+        }
+    }
+}

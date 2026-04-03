@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyLock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --navy: #0b1328;
+      --navy-mid: #0f1e3d;
+      --navy-card: #152248;
+      --navy-deep: #1a2d5a;
+      --navy-rim: rgba(255, 255, 255, 0.07);
+      --blue: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.35);
+      --blue-dim: rgba(59, 130, 246, 0.12);
+      --green: #22d3a5;
+      --green-dim: rgba(34, 211, 165, 0.12);
+      --red: #f87171;
+      --red-dim: rgba(248, 113, 113, 0.14);
+      --amber: #fbbf24;
+      --white: #f0f6ff;
+      --muted: #7b92b8;
+      --subtle: #3d5278;
+      --radius-sm: 10px;
+      --radius: 14px;
+    }
+
+    body {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* ── Full-page overlays ──────────────────────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(8, 14, 30, 0.96);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .ov-card {
+      background: var(--navy-card);
+      border: 1px solid var(--navy-rim);
+      border-radius: 20px;
+      padding: 28px 24px 22px;
+      width: 300px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(16px) scale(0.95);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .ov-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .ov-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+
+    .ov-sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 20px;
+    }
+
+    /* ── 4-digit PIN input boxes ─────────────────────────────────────────── */
+    .pin-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .pin-box {
+      width: 52px;
+      height: 56px;
+      background: var(--navy-deep);
+      border: 2px solid var(--navy-rim);
+      border-radius: 12px;
+      color: var(--white);
+      font-size: 22px;
+      font-weight: 800;
+      font-family: inherit;
+      text-align: center;
+      outline: none;
+      caret-color: transparent;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      /* hide typed char immediately */
+      -webkit-text-security: disc;
+    }
+
+    .pin-box:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    .pin-box.filled {
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .pin-box.error {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
+    }
+
+    /* ── Overlay messages ────────────────────────────────────────────────── */
+    .ov-msg {
+      font-size: 12px;
+      min-height: 18px;
+      margin-bottom: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .ov-msg.error {
+      color: var(--red);
+    }
+
+    .ov-msg.ok {
+      color: var(--green);
+    }
+
+    .ov-msg.warn {
+      color: var(--amber);
+    }
+
+    /* Lockout countdown */
+    .lockout-box {
+      display: none;
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--red);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .lockout-box.visible {
+      display: block;
+    }
+
+    /* Attempt pips */
+    .attempt-pips {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .pip {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: 1.5px solid var(--subtle);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .pip.used {
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    /* ── Buttons inside overlays ─────────────────────────────────────────── */
+    .ov-btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s;
+      margin-bottom: 8px;
+    }
+
+    .ov-btn.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .ov-btn.primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .ov-btn.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--navy-rim);
+    }
+
+    .ov-btn.ghost:hover {
+      color: var(--white);
+      border-color: var(--subtle);
+    }
+
+    /* Step visibility */
+    .ob-step {
+      display: none;
+    }
+
+    .ob-step.active {
+      display: block;
+    }
+
+    /* ── Streak bar ────────────────────────────────────────────────── */
+    .streak-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px 10px;
+    }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 99px;
+      padding: 4px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fbbf24;
+      white-space: nowrap;
+    }
+
+    .streak-progress-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .streak-progress-bg {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .streak-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #fbbf24, #f97316);
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    .streak-progress-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ── Pomodoro row ──────────────────────────────────────────────── */
+    .pomo-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 16px 12px;
+    }
+
+    .pomo-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--navy-card);
+      border: 1px solid var(--navy-rim);
+      border-radius: 99px;
+      padding: 4px 16px;
+      min-height: 48px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s;
+      user-select: none;
+    }
+
+    .pomo-toggle:hover {
+      border-color: var(--subtle);
+      color: var(--white);
+    }
+
+    .pomo-toggle.on {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+
+    .pomo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--subtle);
+      flex-shrink: 0;
+      transition: background 0.18s;
+    }
+
+    .pomo-toggle.on .pomo-dot {
+      background: #f87171;
+    }
+
+    .phase-pill {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34, 211, 165, 0.1);
+      border: 1px solid rgba(34, 211, 165, 0.3);
+      border-radius: 99px;
+      padding: 4px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #22d3a5;
+      margin-left: auto;
+    }
+
+    .phase-pill.break {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .phase-pill.visible {
+      display: flex;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--navy-rim);
+      background: linear-gradient(180deg, var(--navy-mid) 0%, var(--navy) 100%);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+
+    .brand-name em {
+      color: #60a5fa;
+      font-style: normal;
+    }
+
+    /* Header right cluster */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      transition: all 0.3s;
+      background: rgba(123, 146, 184, 0.1);
+      color: var(--muted);
+      border: 1px solid rgba(123, 146, 184, 0.2);
+    }
+
+    .status-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+
+    .status-badge.active {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(34, 211, 165, 0.3);
+    }
+
+    .status-badge.active .dot {
+      background: var(--green);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.25;
+      }
+    }
+
+    /* Gear / settings button */
+    .btn-gear {
+      width: 28px;
+      height: 28px;
+      background: var(--navy-card);
+      border: 1px solid var(--navy-rim);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s;
+      flex-shrink: 0;
+    }
+
+    .btn-gear:hover {
+      color: var(--white);
+      border-color: var(--subtle);
+      background: var(--navy-deep);
+    }
+
+    /* ── Timer ───────────────────────────────────────────────────────────── */
+    .timer-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 22px 16px 16px;
+      gap: 6px;
+    }
+
+    .ring-wrap {
+      position: relative;
+      width: 156px;
+      height: 156px;
+    }
+
+    .ring-svg {
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 0 12px var(--blue-glow));
+    }
+
+    .ring-track {
+      fill: none;
+      stroke: var(--navy-deep);
+      stroke-width: 9;
+    }
+
+    .ring-fill {
+      fill: none;
+      stroke: url(#blueGrad);
+      stroke-width: 9;
+      stroke-linecap: round;
+      stroke-dasharray: 433.5;
+      stroke-dashoffset: 433.5;
+      transition: stroke-dashoffset 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-display {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      color: var(--white);
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
+    }
+
+    .timer-display.done {
+      color: var(--green);
+    }
+
+    .timer-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    .progress-bar-wrap {
+      width: 100%;
+      padding: 0 20px;
+      margin-bottom: 2px;
+    }
+
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--navy-deep);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #818cf8);
+      border-radius: 99px;
+      transition: width 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Preset chips ────────────────────────────────────────────────────── */
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      margin-bottom: 10px;
+    }
+
+    .time-row label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+
+    .presets {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .preset-btn {
+      flex: 1;
+      padding: 5px 0;
+      background: var(--navy-card);
+      border: 1px solid var(--navy-rim);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      font-family: inherit;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+    }
+
+    .preset-btn.active {
+      background: var(--blue-dim);
+      border-color: rgba(59, 130, 246, 0.6);
+      color: #60a5fa;
+    }
+
+    /* ── Custom input ────────────────────────────────────────────────────── */
+    .custom-wrap {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .custom-wrap label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+
+    #custom-time {
+      flex: 1;
+      background: var(--navy-card);
+      border: 1px solid var(--navy-rim);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      padding: 7px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #custom-time::placeholder {
+      color: var(--subtle);
+    }
+
+    #custom-time:focus {
+      border-color: rgba(59, 130, 246, 0.7);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .custom-wrap .unit {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .btn-set {
+      padding: 7px 14px;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: var(--radius-sm);
+      color: #60a5fa;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-set:hover {
+      background: rgba(59, 130, 246, 0.22);
+    }
+
+    .btn-set:active {
+      transform: scale(0.95);
+    }
+
+    /* ── Toggle button ───────────────────────────────────────────────────── */
+    .toggle-wrap {
+      padding: 0 16px 16px;
+    }
+
+    #btn-toggle {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: inherit;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    }
+
+    #btn-toggle:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
+    }
+
+    #btn-toggle:active {
+      transform: translateY(0);
+      filter: brightness(0.97);
+    }
+
+    #btn-toggle.stop {
+      background: var(--red-dim);
+      color: var(--red);
+      box-shadow: 0 4px 14px rgba(248, 113, 113, 0.25);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+
+    #btn-toggle.stop:hover {
+      background: rgba(248, 113, 113, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    .footer {
+      margin-top: auto;
+      padding: 8px 16px 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: var(--subtle);
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Shake ───────────────────────────────────────────────────────────── */
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      20%,
+      60% {
+        transform: translateX(-4px);
+      }
+
+      40%,
+      80% {
+        transform: translateX(4px);
+      }
+    }
+
+    .shake {
+      animation: shake 0.35s ease;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       OVERLAY 1 — Onboarding: Guardian sets PIN for the first time
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="overlay hidden" id="overlay-onboarding">
+    <div class="ov-card">
+      <span class="ov-icon">🔐</span>
+      <div class="ov-title">Set Guardian PIN</div>
+      <p class="ov-sub">
+        This 4-digit PIN protects StudyLock settings.<br>
+        Keep it secret from your students.
+      </p>
+
+      <!-- Step 1: Create -->
+      <div class="ob-step active" id="ob-step-1">
+        <div
+          style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">
+          Create PIN
+        </div>
+        <div class="pin-row" id="ob-pin-create"></div>
+        <div class="ov-msg" id="ob-msg-1"></div>
+        <button class="ov-btn primary" id="ob-btn-next">Continue →</button>
+      </div>
+
+      <!-- Step 2: Confirm -->
+      <div class="ob-step" id="ob-step-2">
+        <div
+          style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">
+          Confirm PIN
+        </div>
+        <div class="pin-row" id="ob-pin-confirm"></div>
+        <div class="ov-msg" id="ob-msg-2"></div>
+        <button class="ov-btn primary" id="ob-btn-save">Save PIN & Continue</button>
+        <button class="ov-btn ghost" id="ob-btn-back">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       OVERLAY 2 — PIN Modal: Verify before stopping session / changing settings
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="overlay hidden" id="overlay-pin">
+    <div class="ov-card">
+      <span class="ov-icon">🔒</span>
+      <div class="ov-title" id="pin-modal-title">Guardian PIN Required</div>
+      <p class="ov-sub" id="pin-modal-sub">Enter your 4-digit PIN to continue.</p>
+
+      <!-- Lockout message -->
+      <div class="lockout-box" id="pin-lockout-box">
+        🚫 Too many wrong attempts.<br>
+        Try again in <strong id="pin-lockout-timer">10:00</strong>.
+      </div>
+
+      <!-- PIN boxes (hidden during lockout) -->
+      <div id="pin-input-area">
+        <div class="pin-row" id="modal-pin-row"></div>
+        <!-- Attempt pips: 3 circles, fill red on fail -->
+        <div class="attempt-pips" id="attempt-pips">
+          <div class="pip" id="pip-1"></div>
+          <div class="pip" id="pip-2"></div>
+          <div class="pip" id="pip-3"></div>
+        </div>
+        <div class="ov-msg" id="pin-msg"></div>
+      </div>
+
+      <button class="ov-btn ghost" id="pin-btn-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MAIN POPUP CONTENT
+       ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">🔒</div>
+      <div class="brand-name">Study<em>Lock</em></div>
+    </div>
+    <div class="header-right">
+      <div class="status-badge" id="status-badge">
+        <span class="dot"></span>
+        <span id="status-text">Idle</span>
+      </div>
+      <button class="btn-gear" id="btn-settings" title="Guardian Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- Timer Ring -->
+  <div class="timer-area">
+    <div class="ring-wrap">
+      <svg class="ring-svg" width="156" height="156" viewBox="0 0 156 156">
+        <defs>
+          <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="100%" stop-color="#818cf8" />
+          </linearGradient>
+        </defs>
+        <circle class="ring-track" cx="78" cy="78" r="69" />
+        <circle class="ring-fill" cx="78" cy="78" r="69" id="ring-fill" />
+      </svg>
+      <div class="ring-center">
+        <div class="timer-display" id="timer-display">25:00</div>
+        <div class="timer-label" id="timer-label">ready</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="bar-fill"></div>
+    </div>
+  </div>
+
+  <!-- ── Streak bar ── -->
+  <div class="streak-bar">
+    <div class="streak-badge" id="streak-badge">🔥 –</div>
+    <div class="streak-progress-wrap">
+      <div class="streak-progress-bg">
+        <div class="streak-progress-fill" id="streak-fill" style="width:0%"></div>
+      </div>
+      <div class="streak-progress-label" id="streak-label">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="time-row">
+    <label>Duration</label>
+    <div class="presets" id="presets">
+      <button class="preset-btn" data-min="15">15m</button>
+      <button class="preset-btn active" data-min="25">25m</button>
+      <button class="preset-btn" data-min="45">45m</button>
+      <button class="preset-btn" data-min="60">60m</button>
+      <button class="preset-btn" data-min="90">90m</button>
+    </div>
+  </div>
+
+  <!-- Custom input -->
+  <div class="custom-wrap">
+    <label for="custom-time">Custom</label>
+    <input type="number" id="custom-time" min="1" max="480" placeholder="e.g. 30" autocomplete="off" />
+    <span class="unit">min</span>
+    <button class="btn-set" id="btn-set">Set</button>
+  </div>
+
+  <!-- ── Pomodoro row ── -->
+  <div class="pomo-row">
+    <button class="pomo-toggle" id="btn-pomo" title="25m study / 5m break cycling">
+      <span class="pomo-dot"></span>
+      🍅 Pomodoro
+    </button>
+    <div class="phase-pill" id="phase-pill">
+      <span id="phase-icon">📚</span>
+      <span id="phase-label">Study</span>
+    </div>
+  </div>
+
+  <!-- Toggle button -->
+  <div class="toggle-wrap">
+    <button id="btn-toggle">
+      <span class="btn-icon" id="btn-icon">▶</span>
+      <span id="btn-label">Start Focus Session</span>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span class="footer-text">StudyLock · Stay in the zone</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔒 Blocked – StudyLock</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ── Reset ──────────────────────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ── Tokens ─────────────────────────────────────────────────────────── */
+        :root {
+            --navy: #080d1a;
+            --navy-card: rgba(13, 19, 38, 0.82);
+            --navy-rim: rgba(255, 255, 255, 0.07);
+            --navy-inner: rgba(255, 255, 255, 0.04);
+
+            --blue: #3b82f6;
+            --blue-glow: rgba(59, 130, 246, 0.25);
+            --blue-dim: rgba(59, 130, 246, 0.1);
+
+            --red: #f87171;
+            --red-dim: rgba(248, 113, 113, 0.12);
+            --red-rim: rgba(248, 113, 113, 0.28);
+
+            --amber: #fbbf24;
+            --amber-dim: rgba(251, 191, 36, 0.1);
+
+            --green: #22d3a5;
+            --green-dim: rgba(34, 211, 165, 0.1);
+
+            --white: #f0f6ff;
+            --muted: #6b83a8;
+            --subtle: #2d3d5c;
+
+            /* Ring geometry:  r=60 → C = 2π×60 ≈ 376.99 */
+            --ring-c: 376.99;
+        }
+
+        /* ── Body ───────────────────────────────────────────────────────────── */
+        body {
+            min-height: 100vh;
+            background: var(--navy);
+            color: var(--white);
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Background aurora orbs ─────────────────────────────────────────── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(90px);
+            opacity: 0;
+            animation: orbIn 1.2s ease forwards, orbDrift var(--dur, 14s) ease-in-out infinite alternate;
+        }
+
+        .orb-1 {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, #1e3a8a 0%, transparent 70%);
+            top: -160px;
+            left: -160px;
+            --dur: 16s;
+            animation-delay: 0s, 1.2s;
+        }
+
+        .orb-2 {
+            width: 360px;
+            height: 360px;
+            background: radial-gradient(circle, #4f1d8f 0%, transparent 70%);
+            bottom: -120px;
+            right: -100px;
+            --dur: 20s;
+            animation-delay: 0.3s, 1.5s;
+        }
+
+        .orb-3 {
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle, #831843 0%, transparent 70%);
+            top: 40%;
+            left: 60%;
+            --dur: 18s;
+            animation-delay: 0.6s, 1.8s;
+        }
+
+        @keyframes orbIn {
+            to {
+                opacity: 0.22;
+            }
+        }
+
+        @keyframes orbDrift {
+            from {
+                transform: translate(0, 0) scale(1);
+            }
+
+            to {
+                transform: translate(30px, 50px) scale(1.1);
+            }
+        }
+
+        /* ── Scanlines texture ──────────────────────────────────────────────── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.04) 2px,
+                    rgba(0, 0, 0, 0.04) 4px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Card ───────────────────────────────────────────────────────────── */
+        .card {
+            position: relative;
+            z-index: 1;
+            background: var(--navy-card);
+            border: 1px solid var(--navy-rim);
+            border-radius: 28px;
+            padding: 44px 44px 36px;
+            max-width: 560px;
+            width: 92%;
+            text-align: center;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04),
+                0 40px 100px rgba(0, 0, 0, 0.6);
+            animation: cardUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes cardUp {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* ── Lock icon ──────────────────────────────────────────────────────── */
+        .lock-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            border-radius: 20px;
+            background: var(--red-dim);
+            border: 1px solid var(--red-rim);
+            font-size: 36px;
+            animation: lockPop 0.65s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+        }
+
+        @keyframes lockPop {
+            from {
+                opacity: 0;
+                transform: scale(0.3) rotate(-15deg);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        /* ── Headline ───────────────────────────────────────────────────────── */
+        .headline {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.8px;
+            line-height: 1.2;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #f0f6ff 20%, #93c5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subhead {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 500;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        /* ── Blocked site pill ──────────────────────────────────────────────── */
+        .site-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--red-dim);
+            border: 1px solid var(--red-rim);
+            border-radius: 99px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--red);
+            margin-bottom: 24px;
+            max-width: 100%;
+        }
+
+        .site-pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--red);
+            flex-shrink: 0;
+        }
+
+        .site-pill span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ── YouTube channel notice ─────────────────────────────────────────── */
+        .yt-notice {
+            display: none;
+            /* shown via JS when reason=ytblocked */
+            align-items: center;
+            gap: 10px;
+            background: var(--amber-dim);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 12.5px;
+            color: var(--amber);
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .yt-notice.visible {
+            display: flex;
+        }
+
+        .yt-notice-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        /* ── Divider ────────────────────────────────────────────────────────── */
+        .divider {
+            height: 1px;
+            background: var(--navy-rim);
+            margin: 0 0 22px;
+        }
+
+        /* ── Pomodoro timer ring ────────────────────────────────────────────── */
+        .timer-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: var(--navy-inner);
+            border: 1px solid var(--navy-rim);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 22px;
+            text-align: left;
+        }
+
+        .ring-wrap {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+        }
+
+        .ring-svg {
+            transform: rotate(-90deg);
+        }
+
+        .ring-track {
+            fill: none;
+            stroke: var(--subtle);
+            stroke-width: 7;
+        }
+
+        .ring-fill {
+            fill: none;
+            stroke: url(#timerGrad);
+            stroke-width: 7;
+            stroke-linecap: round;
+            stroke-dasharray: var(--ring-c);
+            stroke-dashoffset: var(--ring-c);
+            /* starts empty; JS sets it */
+            transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ring-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ring-time {
+            font-size: 17px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: var(--white);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-meta {
+            flex: 1;
+        }
+
+        .timer-label {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 3px;
+        }
+
+        .timer-remaining {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .timer-remaining em {
+            font-style: normal;
+            color: #60a5fa;
+        }
+
+        .timer-inactive {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        /* ── Quote block ────────────────────────────────────────────────────── */
+        .quote-block {
+            background: var(--navy-inner);
+            border-left: 3px solid #3b82f6;
+            border-radius: 0 10px 10px 0;
+            padding: 14px 16px;
+            text-align: left;
+            margin-bottom: 28px;
+            animation: quoteSlide 0.5s 0.4s ease backwards;
+        }
+
+        @keyframes quoteSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .quote-text {
+            font-size: 14px;
+            font-style: italic;
+            color: #cbd5e1;
+            line-height: 1.65;
+            margin-bottom: 6px;
+        }
+
+        .quote-author {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--muted);
+            letter-spacing: 0.3px;
+        }
+
+        /* ── Footer branding ────────────────────────────────────────────────── */
+        .footer-brand {
+            font-size: 11px;
+            color: var(--subtle);
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .footer-brand span {
+            color: #3b5280;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- ── Blocked card ── -->
+    <div class="card" role="main">
+
+        <!-- Lock icon -->
+        <div class="lock-wrap" aria-hidden="true">🔒</div>
+
+        <!-- Headline -->
+        <h1 class="headline">This site is blocked<br>during study time</h1>
+        <p class="subhead">StudyLock is protecting your focus session.</p>
+
+        <!-- Blocked site name -->
+        <div class="site-pill">
+            <span class="dot"></span>
+            <span id="blocked-site">this site</span>
+        </div>
+
+        <!-- YouTube-specific notice (shown only when reason=ytblocked) -->
+        <div class="yt-notice" id="yt-notice" role="alert">
+            <span class="yt-notice-icon">📺</span>
+            <span>Only approved study channels are allowed on YouTube.<br>
+                The homepage, Shorts, search and trending are blocked.</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Pomodoro countdown ring -->
+        <div class="timer-section" id="timer-section">
+            <div class="ring-wrap">
+                <svg class="ring-svg" width="80" height="80" viewBox="0 0 80 80">
+                    <defs>
+                        <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#3b82f6" />
+                            <stop offset="100%" stop-color="#818cf8" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="ring-track" cx="40" cy="40" r="60" />
+                    <!-- ↑ r=30 for 80px canvas; circumference = 2π×30 ≈ 188.5 -->
+                    <!-- We use a separate CSS var for flexibility -->
+                    <circle class="ring-fill" cx="40" cy="40" r="30" id="ring-fill"
+                        style="stroke-dasharray:188.5; stroke-dashoffset:188.5;" />
+                </svg>
+                <div class="ring-center">
+                    <div class="ring-time" id="ring-time">--:--</div>
+                </div>
+            </div>
+            <div class="timer-meta">
+                <div class="timer-label">⏱ Pomodoro timer</div>
+                <div class="timer-remaining" id="timer-text">
+                    <span class="timer-inactive">Loading session…</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motivational quote -->
+        <div class="quote-block" aria-label="Motivational quote">
+            <div class="quote-text" id="quote-text"></div>
+            <div class="quote-author" id="quote-author"></div>
+        </div>
+
+        <!-- Footer — NO bypass button, intentionally -->
+        <div class="footer-brand">
+            Study<span>Lock</span> &middot; You&rsquo;re doing great. Keep going.
+        </div>
+
+    </div><!-- /.card -->
+
+    <script>
+        "use strict";
+
+        /* ── 10 motivational quotes ──────────────────────────────────────────── */
+        const QUOTES = [
+            {
+                text: "The secret of getting ahead is getting started.",
+                author: "Mark Twain"
+            },
+            {
+                text: "Focus is the art of knowing what to ignore.",
+                author: "James Clear"
+            },
+            {
+                text: "Discipline is choosing between what you want now and what you want most.",
+                author: "Augusta F. Kantra"
+            },
+            {
+                text: "Deep work is the superpower of the 21st century.",
+                author: "Cal Newport"
+            },
+            {
+                text: "You don't rise to the level of your goals, you fall to the level of your systems.",
+                author: "James Clear"
+            },
+            {
+                text: "The expert in anything was once a beginner who refused to give up.",
+                author: "Helen Hayes"
+            },
+            {
+                text: "Success is the sum of small efforts, repeated day in and day out.",
+                author: "Robert Collier"
+            },
+            {
+                text: "It's not that I'm so smart, it's just that I stay with problems longer.",
+                author: "Albert Einstein"
+            },
+            {
+                text: "Opportunity is missed by most people because it is dressed in overalls and looks like work.",
+                author: "Thomas Edison"
+            },
+            {
+                text: "The beautiful thing about learning is that no one can take it away from you.",
+                author: "B.B. King"
+            },
+        ];
+
+        /* ── Pick a quote deterministically by minute-of-day so it's stable ─── */
+        /* (but still rotates — not the same quote every single reload)          */
+        const quoteIndex = Math.floor(Date.now() / 60_000) % QUOTES.length;
+        const q = QUOTES[quoteIndex];
+        document.getElementById("quote-text").textContent = `"${q.text}"`;
+        document.getElementById("quote-author").textContent = `— ${q.author}`;
+
+        /* ── Parse URL params ────────────────────────────────────────────────── */
+        const params = new URLSearchParams(window.location.search);
+        const rawUrl = params.get("url") || "";
+        const reason = params.get("reason") || "blocked";   // "blocked" | "ytblocked"
+
+        /* Derive a clean display name from the blocked URL */
+        const siteName = (() => {
+            try {
+                return new URL(rawUrl).hostname.replace(/^www\./, "");
+            } catch {
+                return rawUrl || "this site";
+            }
+        })();
+        document.getElementById("blocked-site").textContent = siteName || "this site";
+
+        /* Show YouTube-specific notice when reason is ytblocked */
+        if (reason === "ytblocked") {
+            document.getElementById("yt-notice").classList.add("visible");
+        }
+
+        /* ── Ring geometry: r=30, C = 2π×30 ≈ 188.5 ────────────────────────── */
+        const RING_C = 188.5;
+        const ringFill = document.getElementById("ring-fill");
+        const ringTime = document.getElementById("ring-time");
+        const timerTxt = document.getElementById("timer-text");
+
+        /* Format seconds → MM:SS */
+        function fmt(totalSec) {
+            const m = Math.floor(totalSec / 60).toString().padStart(2, "0");
+            const s = (totalSec % 60).toString().padStart(2, "0");
+            return `${m}:${s}`;
+        }
+
+        /* Format seconds into a human label */
+        function humanRemaining(sec) {
+            if (sec <= 0) return `<em>Session complete!</em>`;
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            if (m === 0) return `<em>${s}s</em> remaining`;
+            if (s === 0) return `<em>${m} min</em> remaining`;
+            return `<em>${m}m ${s}s</em> remaining`;
+        }
+
+        /* Update the SVG ring progress (fraction 0→1 = empty→full) */
+        function setRing(fraction) {
+            const f = Math.min(Math.max(fraction, 0), 1);
+            const offset = RING_C * (1 - f);
+            ringFill.style.strokeDashoffset = offset;
+        }
+
+        /* ── Tick: read session state from storage every second ─────────────── */
+        let lastSessionDuration = null;   // track total duration for ring calculation
+
+        async function tick() {
+            try {
+                const state = await browser.storage.local.get([
+                    "active", "startTime", "duration"
+                ]);
+
+                if (!state.active || !state.startTime || !state.duration) {
+                    /* No active session */
+                    ringTime.textContent = "--:--";
+                    timerTxt.innerHTML = `<span class="timer-inactive">No active session</span>`;
+                    setRing(0);
+                    return;
+                }
+
+                const totalSec = state.duration * 60;
+                const elapsedSec = Math.floor((Date.now() - state.startTime) / 1000);
+                const remainSec = Math.max(0, totalSec - elapsedSec);
+
+                /* Ring: fills as time is consumed */
+                const fraction = elapsedSec / totalSec;
+
+                ringTime.textContent = fmt(remainSec);
+                timerTxt.innerHTML = humanRemaining(remainSec);
+                setRing(fraction);
+
+            } catch (_) {
+                /* Extension context may briefly be unavailable */
+                ringTime.textContent = "--:--";
+                timerTxt.innerHTML = `<span class="timer-inactive">Connecting…</span>`;
+            }
+        }
+
+        /* Run immediately, then every second */
+        tick();
+        setInterval(tick, 1000);
+    </script>
+</body>
+
+</html>
