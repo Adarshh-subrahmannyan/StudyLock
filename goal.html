@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>StudyLock — Daily Goal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #080e1c;
+            --card: #0f1930;
+            --rim: rgba(255, 255, 255, 0.07);
+            --blue: #3b82f6;
+            --white: #f0f6ff;
+            --muted: #6b83a8;
+            --subtle: #2d3d5c;
+        }
+
+        body {
+            background: var(--navy);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        .container {
+            background: var(--card);
+            border: 1px solid var(--rim);
+            border-radius: 20px;
+            padding: 32px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .sub {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+        .field {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input {
+            width: 100%;
+            background: #152248;
+            border: 1px solid var(--rim);
+            border-radius: 10px;
+            color: var(--white);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .input:focus {
+            border-color: var(--blue);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="icon">🎯</div>
+        <div class="title">Set Your Daily Goal</div>
+        <div class="sub">What's your main priority for the day?</div>
+        <div class="field">
+            <label>What is your study goal today?</label>
+            <input type="text" id="goal-text" class="input" placeholder="e.g. Complete Chapter 5 Chemistry"
+                autocomplete="off" />
+        </div>
+        <div class="field">
+            <label>Target study hours today</label>
+            <input type="number" id="target-hours" class="input" min="1" max="12" value="2" />
+        </div>
+        <div class="field">
+            <label>Subject</label>
+            <select id="subject" class="input">
+                <option value="Maths">Maths</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Biology">Biology</option>
+                <option value="History">History</option>
+                <option value="Geography">Geography</option>
+                <option value="English">English</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <button id="btn-submit" class="btn">Set My Goal 🎯</button>
+    </div>
+    <script src="goal.js"></script>
+</body>
+
+</html>

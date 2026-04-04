@@ -718,7 +718,200 @@
                 </div>
             </div>
 
-            <!-- ─── Section 4: Danger Zone ───────────────────────── -->
+            <!-- ─── Section 4: Telegram Alerts ───────────────────── -->
+            <div class="section">
+                <div class="section-head">
+                    <div class="section-icon icon-blue">✈️</div>
+                    <div>
+                        <div class="section-title">Telegram Alerts</div>
+                        <div class="section-sub">Get notified when a blocked site is accessed</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Enable Alerts</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="tg-enable-toggle" style="opacity:0;width:0;height:0;" />
+                        <span id="tg-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <style>
+                    #tg-slider:before {
+                        position: absolute;
+                        content: "";
+                        height: 16px;
+                        width: 16px;
+                        left: 3px;
+                        bottom: 3px;
+                        background-color: var(--muted);
+                        transition: .3s;
+                        border-radius: 50%;
+                    }
+
+                    #tg-enable-toggle:checked+#tg-slider {
+                        background-color: var(--blue);
+                        border-color: var(--blue);
+                    }
+
+                    #tg-enable-toggle:checked+#tg-slider:before {
+                        transform: translateX(20px);
+                        background-color: #fff;
+                    }
+                </style>
+
+                <div class="input-row">
+                    <input type="text" class="text-input" id="tg-token-input"
+                        placeholder="Bot Token (e.g. 123456:ABC-DEF)" autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="input-row">
+                    <input type="text" class="text-input" id="tg-chatid-input" placeholder="Chat ID (e.g. 987654321)"
+                        autocomplete="off" spellcheck="false" />
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+                    <button class="btn btn-primary" id="btn-tg-save" style="width:auto;flex:1">
+                        💾 Save Settings
+                    </button>
+                    <button class="btn btn-ghost" id="btn-tg-test" style="width:auto;flex:1;margin-top:0">
+                        🔔 Test Alert
+                    </button>
+                </div>
+                <div class="msg" id="tg-msg" style="margin-top:12px"></div>
+            </div>
+
+            <!-- ─── Section 5: Night Study Warnings ───────────────────── -->
+            <div class="section">
+                <div class="section-head">
+                    <div class="section-icon" style="background: rgba(139, 92, 246, 0.1); color: #a78bfa;">🌙</div>
+                    <div>
+                        <div class="section-title">Night Study Warnings</div>
+                        <div class="section-sub">Encourage healthy sleep habits</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Enable Night Warnings</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="nw-enable" style="opacity:0;width:0;height:0;" checked />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <div class="input-row" style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:12px; color:var(--muted); font-weight:600;">Warning Start Time</label>
+                    <input type="time" class="text-input" id="nw-time" value="23:00" style="width:120px;" />
+                </div>
+
+                <div style="width:100%; height:1px; background:var(--rim); margin:16px 0;"></div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Force End Session</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="nw-force-enable" style="opacity:0;width:0;height:0;" />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <div class="input-row" style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:12px; color:var(--muted); font-weight:600;">Force End Time</label>
+                    <input type="time" class="text-input" id="nw-force-time" value="01:00" style="width:120px;" />
+                </div>
+
+                <div style="width:100%; height:1px; background:var(--rim); margin:16px 0;"></div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Send Telegram at
+                        Midnight</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="nw-telegram-enable" style="opacity:0;width:0;height:0;" />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <button class="btn btn-primary" id="btn-nw-save" style="margin-top:12px">
+                    💾 Save Night Settings
+                </button>
+                <div class="msg" id="nw-msg" style="margin-top:12px"></div>
+
+                <style>
+                    .custom-slider:before {
+                        position: absolute;
+                        content: "";
+                        height: 16px;
+                        width: 16px;
+                        left: 3px;
+                        bottom: 3px;
+                        background-color: var(--muted);
+                        transition: .3s;
+                        border-radius: 50%;
+                    }
+
+                    input:checked+.custom-slider {
+                        background-color: var(--blue);
+                        border-color: var(--blue);
+                    }
+
+                    input:checked+.custom-slider:before {
+                        transform: translateX(20px);
+                        background-color: #fff;
+                    }
+                </style>
+            </div>
+
+            <!-- ─── Section 6: Parental Controls ─────────────────────────── -->
+            <div class="section">
+                <div class="section-head">
+                    <div class="section-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">🛡️</div>
+                    <div>
+                        <div class="section-title">Parental Controls</div>
+                        <div class="section-sub">Enhanced guardrails & notifications</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Strict Lockdown (Block all
+                        without active session)</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="pc-strict-enable" style="opacity:0;width:0;height:0;" />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <div style="width:100%; height:1px; background:var(--rim); margin:16px 0;"></div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Telegram Alert on Session
+                        Start</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="pc-start-enable" style="opacity:0;width:0;height:0;" />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--white);">Telegram Alert on Session End
+                        (with visited sites)</label>
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                        <input type="checkbox" id="pc-end-enable" style="opacity:0;width:0;height:0;" />
+                        <span class="custom-slider"
+                            style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--card2);border:1px solid var(--rim);transition:.3s;border-radius:24px;"></span>
+                    </label>
+                </div>
+
+                <button class="btn btn-primary" id="btn-pc-save" style="margin-top:12px">
+                    💾 Save Controls
+                </button>
+                <div class="msg" id="pc-msg" style="margin-top:12px"></div>
+            </div>
+
+            <!-- ─── Section 7: Danger Zone ───────────────────────── -->
             <div class="section">
                 <div class="section-head">
                     <div class="section-icon icon-red">⚠️</div>

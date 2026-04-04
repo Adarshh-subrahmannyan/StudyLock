@@ -1081,6 +1081,7 @@
             <div class="dash-tabs">
                 <button class="dash-tab active" data-target="tab-guardian">Guardian Dashboard</button>
                 <button class="dash-tab" data-target="tab-freetime">My Browser Time</button>
+                <button class="dash-tab" data-target="tab-goals">Daily Goals</button>
             </div>
 
             <div id="tab-guardian" class="tab-pane active">
@@ -1100,6 +1101,19 @@
                         <div class="metric-label">⚠️ Blocked Attempts</div>
                         <div class="metric-value red" id="m-blocked">--</div>
                         <div class="metric-sub" id="m-blocked-sub">blocked navigations</div>
+                    </div>
+                </div>
+
+                <div class="metrics-row" style="margin-top: 14px;">
+                    <div class="metric-card green">
+                        <div class="metric-label">🧘 Smart Breaks Taken</div>
+                        <div class="metric-value green" id="m-breaks-count">0</div>
+                        <div class="metric-sub">total breaks initiated</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">⏳ Avg Focus Before Break</div>
+                        <div class="metric-value blue" id="m-breaks-avg">0m</div>
+                        <div class="metric-sub">minutes of study per break</div>
                     </div>
                 </div>
 
@@ -1218,6 +1232,49 @@
                             <div class="empty-state">Loading data…</div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="tab-goals" class="tab-pane">
+                <div class="metrics-row">
+                    <div class="metric-card green">
+                        <div class="metric-label">🔥 Strategy Streak</div>
+                        <div class="metric-value green" id="g-streak">0</div>
+                        <div class="metric-sub">consecutive completed goals</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">📊 Completion Rate</div>
+                        <div class="metric-value blue" id="g-rate">0%</div>
+                        <div class="metric-sub">total goals achieved</div>
+                    </div>
+                    <div class="metric-card red">
+                        <div class="metric-label">📝 Goals Set</div>
+                        <div class="metric-value red" id="g-total">0</div>
+                        <div class="metric-sub">days with a recorded goal</div>
+                    </div>
+                </div>
+
+                <div class="section" style="margin-bottom:20px;">
+                    <div class="section-title"><span class="s-icon">🗓</span> Goals History</div>
+
+                    <table class="activity-table" id="goals-table">
+                        <thead>
+                            <tr>
+                                <th style="width:120px">Date</th>
+                                <th>Goal Text</th>
+                                <th style="width:100px">Subject</th>
+                                <th style="width:80px">Target</th>
+                                <th style="width:100px;text-align:right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="goals-tbody">
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">No goals recorded yet.</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

@@ -39,6 +39,7 @@
 
     body {
       width: 100%;
+      min-width: 360px;
       max-width: 420px;
       margin: 0 auto;
       background: var(--navy);
@@ -48,8 +49,9 @@
       line-height: 1.5;
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      min-height: 520px;
       overflow-y: auto;
+      overflow-x: hidden;
       position: relative;
     }
 
@@ -926,6 +928,30 @@
         <div class="streak-progress-fill" id="streak-fill" style="width:0%"></div>
       </div>
       <div class="streak-progress-label" id="streak-label">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── Daily Goal Card ── -->
+  <div class="goal-card-wrap" style="padding: 0 16px 12px; display: none;" id="goal-card-wrap">
+    <div
+      style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+      <div style="font-size: 20px;">🎯</div>
+      <div style="flex: 1; min-width: 0;">
+        <div
+          style="font-size: 10px; color: var(--blue); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
+          Today's Goal <span id="goal-subject" style="color:var(--muted); font-weight: 600;"></span></div>
+        <div id="goal-text"
+          style="font-size: 13px; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+        </div>
+      </div>
+      <div id="goal-status"
+        style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,0.1); color: var(--muted);">
+        --</div>
+      <div id="btn-edit-goal"
+        style="cursor: pointer; padding: 4px; background: transparent; border: none; font-size: 13px; color: var(--blue); opacity: 0.8;"
+        title="Edit Daily Goal">
+        ✏️
+      </div>
     </div>
   </div>
 

@@ -1,0 +1,130 @@
+Validation Summary:
+
+errors          0              
+notices         0              
+warnings        12             
+
+WARNINGS:
+
+Code                                  Message       Description              F
+MISSING_DATA_COLLECTION_PERMISSIONS   The           The                      m
+                                      "data_coll…   "/browser_specific_se…   s
+                                      ection_per…   ttings/gecko/data_col…    
+                                      missions"     lection_permissions"      
+                                      property is   property is required      
+                                      missing.      for all new Firefox       
+                                                    extensions, and will      
+                                                    be required for new       
+                                                    versions of existing      
+                                                    extensions in the         
+                                                    future. Please add        
+                                                    this key to the           
+                                                    manifest. More            
+                                                    information at:           
+                                                    https://mzl.la/firefo…    
+                                                    x-builtin-data-consent    
+KEY_FIREFOX_ANDROID_UNSUPPORTED_BY…   Manifest      "strict_min_version"     m
+_MIN_VERSION                          key not       requires Firefox for     s
+                                      supported     Android 57, which was     
+                                      by the        released before           
+                                      specified     version 79 introduced     
+                                      minimum       support for               
+                                      Firefox for   "browser_action.defau…    
+                                      Android       lt_icon".                 
+                                      version                                 
+KEY_FIREFOX_ANDROID_UNSUPPORTED_BY…   Manifest      "strict_min_version"     m
+_MIN_VERSION                          key not       requires Firefox for     s
+                                      supported     Android 57, which was     
+                                      by the        released before           
+                                      specified     version 113 introduced    
+                                      minimum       support for               
+                                      Firefox for   "browser_specific_set…    
+                                      Android       tings.gecko_android".     
+                                      version                                 
+INCOMPATIBLE_API                      runtime.on…   This API is not          b
+                                      Suspend is    implemented by the       .
+                                      not           given minimum Firefox     
+                                      supported     version                   
+                                      in Firefox                              
+                                      version                                 
+                                      57.0                                    
+ANDROID_INCOMPATIBLE_API              runtime.on…   This API is not          b
+                                      Suspend is    implemented by the       .
+                                      not           given minimum Firefox     
+                                      supported     for Android version       
+                                      in Firefox                              
+                                      for Android                             
+                                      version                                 
+                                      57.0                                    
+INLINE_SCRIPT                         Inline        Default CSP rules        b
+                                      scripts       prevent inline           m
+                                      blocked by    JavaScript from           
+                                      default       running                   
+                                                    (https://mzl.la/2pn32…    
+                                                    nd).                      
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     d
+                                      assignment    and performance          j
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     d
+                                      assignment    and performance          j
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     d
+                                      assignment    and performance          j
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     d
+                                      assignment    and performance          j
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     d
+                                      assignment    and performance          j
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              
+UNSAFE_VAR_ASSIGNMENT                 Unsafe        Due to both security     s
+                                      assignment    and performance           
+                                      to            concerns, this may not    
+                                      innerHTML     be set using dynamic      
+                                                    values which have not     
+                                                    been adequately           
+                                                    sanitized. This can       
+                                                    lead to security          
+                                                    issues or fairly          
+                                                    serious performance       
+                                                    degradation.              

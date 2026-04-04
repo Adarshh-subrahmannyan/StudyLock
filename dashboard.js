@@ -246,6 +246,69 @@ function renderAll(dateStr) {
     renderHeatmap();
     renderActivityList(dayLogs);
     renderFreeTime(dayLogs);
+    renderGoals();
+    renderSmartBreaks();
+}
+
+async function renderSmartBreaks() {
+    try {
+        const { smartBreaksCount = 0, smartBreaksTotalMins = 0 } = await browser.storage.local.get(["smartBreaksCount", "smartBreaksTotalMins"]);
+        const avg = smartBreaksCount > 0 ? Math.round(smartBreaksTotalMins / smartBreaksCount) : 0;
+
+        document.getElementById("m-breaks-count").textContent = smartBreaksCount;
+        document.getElementById("m-breaks-avg").textContent = avg + "m";
+    } catch (e) { }
+}
+
+// ─────────────────────────────── GOALS HISTORY ───────────────────
+async function renderGoals() {
+    try {
+        const { goalsHistory = [] } = await browser.storage.local.get("goalsHistory");
+
+        let completedCount = 0;
+        let streak = 0;
+
+        // Sort newest first
+        const sorted = [...goalsHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Calculate streak
+        for (let i = 0; i < sorted.length; i++) {
+            if (sorted[i].completed) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+
+        const total = sorted.length;
+        sorted.forEach(g => { if (g.completed) completedCount++; });
+        const rate = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+        document.getElementById("g-streak").textContent = streak;
+        document.getElementById("g-rate").textContent = rate + "%";
+        document.getElementById("g-total").textContent = total;
+
+        const tbody = document.getElementById("goals-tbody");
+        if (total === 0) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No goals recorded yet.</div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = sorted.map(g => {
+            const badge = g.completed ? `<span class="badge ok">✅ Goal Met</span>` : `<span class="badge warn">❌ Missed</span>`;
+            return `
+            <tr>
+                <td style="font-weight:700;color:var(--white)">${fmtDateLabel(g.date)}</td>
+                <td style="font-weight:600;color:var(--white)">${g.goalText}</td>
+                <td><span style="background:var(--card2);padding:2px 8px;border-radius:6px;font-size:11px;color:var(--muted)">${g.subject}</span></td>
+                <td style="color:var(--muted)">${g.targetHours}h</td>
+                <td style="text-align:right">${badge}</td>
+            </tr>`;
+        }).join("");
+
+    } catch (err) {
+        console.error("Goals render error:", err);
+    }
 }
 
 // ─────────────────────────────── FREE TIME ANALYTICS ───────────
@@ -359,7 +422,7 @@ function renderMetrics(logs) {
     const blocked = logs.filter(e => e.status === "blocked").length;
 
     document.getElementById("m-focus").textContent = fmtDuration(focusMs) || "0s";
-    document.getElementById("m-focus-sub").textContent = `across ${ logs.filter(e => e.status === "whitelisted").length } whitelisted visits`;
+    document.getElementById("m-focus-sub").textContent = `across ${logs.filter(e => e.status === "whitelisted").length} whitelisted visits`;
     document.getElementById("m-sites").textContent = domains;
     document.getElementById("m-sites-sub").textContent = `unique domains browsed`;
     document.getElementById("m-blocked").textContent = blocked;
@@ -403,9 +466,9 @@ function renderDonut(logs) {
 
     svg.innerHTML = `
             < circle cx = "90" cy = "90" r = "70" fill = "none" stroke = "#1a2d5a" stroke - width="18" />
-                ${ arcEl(wLen, 0, "#22d3a5") }
-    ${ arcEl(bLen, -wLen, "#f87171") }
-    ${ arcEl(fLen, -(wLen + bLen), "#3d5278") }
+                ${arcEl(wLen, 0, "#22d3a5")}
+    ${arcEl(bLen, -wLen, "#f87171")}
+    ${arcEl(fLen, -(wLen + bLen), "#3d5278")}
     <text x="90" y="83" text-anchor="middle" font-family="Inter,sans-serif"
       font-size="18" font-weight="900" fill="#f0f6ff">${fmtDuration(wMs)}</text>
     <text x="90" y="101" text-anchor="middle" font-family="Inter,sans-serif"
@@ -472,12 +535,12 @@ function renderHeatmap() {
         const cell = document.createElement("div");
         cell.className = "heatmap-cell" + (isToday ? " today" : "");
         cell.style.background = heatColor(focusMin);
-        cell.dataset.tip = `${ fmtDateLabel(dateStr) }: ${ focusMin }m focus`;
+        cell.dataset.tip = `${fmtDateLabel(dateStr)}: ${focusMin}m focus`;
 
         const minEl = document.createElement("div");
         minEl.className = "hm-min";
         minEl.style.color = textColor(focusMin);
-        minEl.textContent = focusMin > 0 ? `${ focusMin } m` : "–";
+        minEl.textContent = focusMin > 0 ? `${focusMin} m` : "–";
 
         const subEl = document.createElement("div");
         subEl.className = "hm-sub";
@@ -510,7 +573,7 @@ function renderActivityList(logs) {
     // Sort newest first
     const sorted = [...filtered].sort((a, b) => b.timestampStart - a.timestampStart);
 
-    countEl.textContent = `${ sorted.length } visit${ sorted.length !== 1 ? "s" : "" } `;
+    countEl.textContent = `${sorted.length} visit${sorted.length !== 1 ? "s" : ""} `;
 
     if (sorted.length === 0) {
         tbody.innerHTML = `< tr > <td colspan="5"><div class="empty-state">
@@ -524,7 +587,7 @@ function renderActivityList(logs) {
 
     sorted.forEach((entry, idx) => {
         const tr = document.createElement("tr");
-        tr.style.animationDelay = `${ Math.min(idx * 20, 300) } ms`;
+        tr.style.animationDelay = `${Math.min(idx * 20, 300)} ms`;
 
         // Status badge
         let badge = "";

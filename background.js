@@ -103,6 +103,32 @@ const STATE_DEFAULTS = Object.freeze({
   // ── Streak ───────────────────────────────────────────────
   streakCount: 0,            // consecutive calendar days with ≥1h focus
   streakLastDate: "",           // "YYYY-MM-DD" of last day streak was earned
+
+  // ── Telegram Alerts ──────────────────────────────────────
+  telegramAlertsEnabled: false,
+  telegramToken: "",
+  telegramChatId: "",
+
+  // ── Daily Goals ──────────────────────────────────────────
+  dailyGoal: null,    // { date: "YYYY-MM-DD", goalText: "", targetHours: 0, subject: "", completed: false }
+  goalsHistory: [],   // Array of dailyGoal objects
+
+  // ── Smart Breaks ──────────────────────────────────────────
+  smartBreakActive: false,
+  smartBreaksCount: 0,
+  smartBreaksTotalMins: 0,
+
+  // ── Night Study Warnings ─────────────────────────────────
+  nightWarningsEnabled: true,
+  nightWarningTime: "23:00",
+  nightForceEndEnabled: false,
+  nightForceEndTime: "01:00",
+  nightTelegramEnabled: false,
+
+  // ── Parental Controls ────────────────────────────────────
+  strictLockdownEnabled: false,
+  sessionStartTelegram: false,
+  sessionEndTelegram: false
 });
 
 /**
@@ -221,9 +247,10 @@ function normalizeYTChannel(raw) {
  * @returns {{ allowed: boolean, reason: string }}
  */
 function isYouTubeAllowed(url, channels) {
-  // No channels configured → treat YouTube as fully blocked
+  // If the user whitelisted youtube.com but specified no custom channels,
+  // we assume they want full unrestricted access to YouTube.
   if (!channels || channels.length === 0) {
-    return { allowed: false, reason: "ytblocked" };
+    return { allowed: true, reason: "" };
   }
 
   let pathname = "";
@@ -349,6 +376,48 @@ function isAllowed(url, whitelist, ytChannels) {
   return { allowed, reason: allowed ? "" : "blocked" };
 }
 
+// ─── Telegram Alerts ──────────────────────────────────────────────────────────
+
+const lastAlertTimes = {}; // domain -> timestamp
+
+async function triggerTelegramAlert(url, sessionStartTimeMs) {
+  const domain = normalizeDomain(url) || url;
+  const now = Date.now();
+
+  if (lastAlertTimes[domain] && (now - lastAlertTimes[domain]) < 5 * 60 * 1000) {
+    return; // Max 1 alert per site per 5 minutes
+  }
+  // Immediately record time to prevent async race condition when multiple subframes load
+  lastAlertTimes[domain] = now;
+
+  try {
+    const state = await loadState();
+    if (!state.telegramAlertsEnabled || !state.telegramToken || !state.telegramChatId) return;
+
+
+
+    const dateObj = new Date();
+    const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dateStr = dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const activeMinutes = Math.floor((now - sessionStartTimeMs) / 60000);
+
+    const text = `⚠️ StudyLock Alert!\n👤 Student tried to open: ${domain}\n⏰ Time: ${timeStr}\n📅 Date: ${dateStr}\n📚 Session was active for: ${activeMinutes} minutes\n🔒 Site was blocked successfully`;
+
+    const apiUrl = `https://api.telegram.org/bot${state.telegramToken}/sendMessage`;
+
+    await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: state.telegramChatId,
+        text: text
+      })
+    });
+  } catch (err) {
+    console.warn("[StudyLock] Failed to send Telegram alert:", err);
+  }
+}
+
 // ─── webRequest interceptor ───────────────────────────────────────────────────
 
 /**
@@ -363,16 +432,50 @@ function isAllowed(url, whitelist, ytChannels) {
  * @param {browser.webRequest.onBeforeRequest.details} details
  * @returns {Promise<browser.webRequest.BlockingResponse>}
  */
+function addMinutes(timeStr, mins) {
+  let [h, m] = timeStr.split(':').map(Number);
+  m += mins; h += Math.floor(m / 60);
+  m = m % 60; h = h % 24;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
 function onBeforeRequest(details) {
   return (async () => {
-    const { active, whitelist, allowedYouTubeChannels, pomodoroPhase } = await loadState();
+    const { active, startTime, whitelist, allowedYouTubeChannels, pomodoroPhase, smartBreakActive, nightForceEndEnabled, nightForceEndTime, strictLockdownEnabled } = await loadState();
 
-    // Session not active → allow everything
-    if (!active) return {};
+    const now = new Date();
+    const currentHHMM = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const isBetween = (curr, start, end) => {
+      if (start < end) return curr >= start && curr < end;
+      return curr >= start || curr < end;
+    };
+
+    if (nightForceEndEnabled && nightForceEndTime && isBetween(currentHHMM, nightForceEndTime, "06:00")) {
+      // Prevent redirect loops for internal/extension pages
+      let parsedScheme = "";
+      try { parsedScheme = new URL(details.url).protocol; } catch { }
+
+      if (!details.url.startsWith(BLOCKED_PAGE) && !ALWAYS_ALLOWED_SCHEMES.has(parsedScheme)) {
+        const destination = BLOCKED_PAGE + "?url=" + encodeURIComponent(details.url) + "&reason=nightlock";
+        return { redirectUrl: destination };
+      }
+    }
+
+    // Session not active
+    if (!active) {
+      if (!strictLockdownEnabled) return {};
+
+      // Strict Lockdown Mode: check if URL is natively allowed (extension pages/localhost)
+      const { allowed } = isAllowed(details.url, [], []);
+      if (allowed) return {};
+
+      const destination = BLOCKED_PAGE + "?url=" + encodeURIComponent(details.url) + "&reason=blocked";
+      return { redirectUrl: destination };
+    }
 
     // ── Pomodoro break: all tabs are free ────────────────────────────────────
     // During a 5-min break the student is rewarded with unrestricted access.
-    if (pomodoroPhase === "break") return {};
+    if (pomodoroPhase === "break" || smartBreakActive) return {};
 
     // Study phase → run whitelist + YouTube channel check
     const { allowed, reason } = isAllowed(
@@ -382,6 +485,9 @@ function onBeforeRequest(details) {
     );
 
     if (allowed) return {};
+
+    // Trigger Telegram Alert (if enabled)
+    triggerTelegramAlert(details.url, startTime);
 
     // Build redirect URL.
     // reason=ytblocked  → blocked.html shows YouTube-specific message.
@@ -405,6 +511,25 @@ browser.webRequest.onBeforeRequest.addListener(
   },
   ["blocking"]               // "blocking" lets us redirect synchronously
 );
+
+// ─── Activity Tracking (Smart Breaks) ────────────────────────────────────────
+
+let tabSwitches = [];
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+  const { active, pomodoroPhase, smartBreakActive } = await loadState();
+  if (!active || pomodoroPhase === "break" || smartBreakActive) return;
+
+  const now = Date.now();
+  tabSwitches.push(now);
+  tabSwitches = tabSwitches.filter(t => now - t <= 5 * 60 * 1000);
+
+  if (tabSwitches.length > 8) {
+    tabSwitches = [];
+    try {
+      await browser.tabs.sendMessage(activeInfo.tabId, { type: "SUGGEST_BREAK" });
+    } catch (_) { }
+  }
+});
 
 // ─── Session management ───────────────────────────────────────────────────────
 
@@ -475,6 +600,15 @@ async function startSession(
     );
   }
 
+  const { sessionStartTelegram, telegramToken, telegramChatId } = await loadState();
+  if (sessionStartTelegram && telegramToken && telegramChatId) {
+    const text = `🔒 StudyLock Session Started!\n⏳ Duration: ${durationMinutes} minutes\n✅ Whitelisted sites: ${whitelist.length}`;
+    fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: telegramChatId, text })
+    }).catch(() => null);
+  }
+
   console.log(
     `[StudyLock] Session started – ${durationMinutes} min | pomo=${pomodoroEnabled} | ` +
     `whitelist: [${whitelist.join(", ")}] | YT channels: [${allowedYouTubeChannels.join(", ")}]`
@@ -487,6 +621,9 @@ async function startSession(
  * @param {"completed"|"manual"} reason
  */
 async function endSession(reason = "completed") {
+  const { startTime, sessionEndTelegram, telegramToken, telegramChatId } = await loadState();
+  const sessionBegun = startTime || Date.now();
+
   await saveState({
     active: false,
     startTime: null,
@@ -509,6 +646,30 @@ async function endSession(reason = "completed") {
 
   notify("StudyLock", message);
   console.log(`[StudyLock] Session ended – reason: ${reason}`);
+
+  if (sessionEndTelegram && telegramToken && telegramChatId) {
+    await finaliseVisit(Date.now()); // ensure current active tab is logged
+    const logs = await loadLog();
+    const sessionVisits = logs.filter(l => l.timestampStart >= sessionBegun && l.status !== "free");
+
+    const domainTimes = {};
+    for (const v of sessionVisits) {
+      domainTimes[v.domain] = (domainTimes[v.domain] || 0) + v.duration;
+    }
+
+    let sitesList = Object.entries(domainTimes)
+      .sort((a, b) => b[1] - a[1])
+      .map(([d, t]) => `- ${d}: ${Math.max(1, Math.round(t / 60000))}m`)
+      .join("\n");
+
+    if (!sitesList) sitesList = "No activity recorded.";
+
+    const text = `✅ StudyLock Session Ended!\nReason: ${reason}\n\nVisited Sites:\n${sitesList}`;
+    fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: telegramChatId, text })
+    }).catch(() => null);
+  }
 }
 
 // ─── Pomodoro transition functions ──────────────────────────────────────────
@@ -618,6 +779,56 @@ async function checkAndUpdateStreak() {
   }
 }
 
+// ─── Daily Goals ──────────────────────────────────────────────────────────────
+
+/**
+ * Check if the user needs to set a goal for today.
+ * If no goal is set for today, pop up the goal overlay.
+ */
+async function checkDailyGoal() {
+  const { dailyGoal } = await loadState();
+  const todayStr = streakDateStr(Date.now());
+
+  if (!dailyGoal || dailyGoal.date !== todayStr) {
+    // Need to set a new goal
+    try {
+      await browser.windows.create({
+        url: browser.runtime.getURL("goal.html"),
+        type: "popup",
+        width: 440,
+        height: 600
+      });
+    } catch (err) {
+      console.warn("[StudyLock] Fallback: opening goal as tab. (Android/Unsupported environment)", err);
+      // Fallback for Android (which doesn't support type: "popup" or multiple windows cleanly)
+      await browser.tabs.create({ url: browser.runtime.getURL("goal.html") });
+    }
+  }
+
+  // Also ensure the 9 PM alarm is set for today/tomorrow
+  setup9PMAlarm();
+}
+
+/**
+ * Schedule the next 9 PM alarm
+ */
+function setup9PMAlarm() {
+  const now = new Date();
+  let target = new Date(now);
+  target.setHours(21, 0, 0, 0);
+
+  if (now > target) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const delayMs = target.getTime() - now.getTime();
+  browser.alarms.create("studylock-9pm-goal", { when: Date.now() + delayMs });
+}
+
+// Run on startup / installation
+browser.runtime.onStartup.addListener(checkDailyGoal);
+browser.runtime.onInstalled.addListener(checkDailyGoal);
+
 // ─── Alarm handler ────────────────────────────────────────────────────────────
 
 browser.alarms.onAlarm.addListener(async alarm => {
@@ -655,6 +866,117 @@ browser.alarms.onAlarm.addListener(async alarm => {
       if (!active || !pomodoroEnabled) break;
       await resumePomodoroStudy();
       break;
+    }
+
+    // ── 9 PM Goal Check ─────────────────────────────────────────────────────
+    case "studylock-9pm-goal": {
+      const { dailyGoal } = await loadState();
+      const todayStr = streakDateStr(Date.now());
+      if (dailyGoal && dailyGoal.date === todayStr && !dailyGoal.completed) {
+        browser.notifications.create("studylock-goal-check", {
+          type: "basic",
+          iconUrl: browser.runtime.getURL("icons/icon128.png"),
+          title: "StudyLock - Goal Check",
+          message: `Did you complete your goal today?\n"${dailyGoal.goalText}"`,
+          buttons: [
+            { title: "✅ Yes" },
+            { title: "❌ No" }
+          ]
+        });
+      }
+      setup9PMAlarm(); // schedule next 9pm
+      break;
+    }
+
+    // ── Smart Break End ───────────────────────────────────────────────────────
+    case "studylock-smart-break-end": {
+      await saveState({ smartBreakActive: false });
+      // Notify all tabs to remove overlay
+      try {
+        const tabs = await browser.tabs.query({});
+        for (let t of tabs) {
+          browser.tabs.sendMessage(t.id, { type: "END_SMART_BREAK" }).catch(() => null);
+        }
+      } catch (e) { }
+      notify("StudyLock", "Break over! Back to work 💪");
+      break;
+    }
+
+    // ── Night Warnings Check ──────────────────────────────────────────────────
+    case "studylock-minute-tick": {
+      const state = await loadState();
+
+      const now = new Date();
+      const currentHHMM = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      const isBetween = (curr, start, end) => {
+        if (start < end) return curr >= start && curr < end;
+        return curr >= start || curr < end;
+      };
+
+      if (state.nightForceEndEnabled && state.nightForceEndTime && isBetween(currentHHMM, state.nightForceEndTime, "06:00")) {
+        if (state.active) {
+          await endSession("night");
+          notify("StudyLock", "Session ended. Please sleep. Good night! 🌙");
+          try {
+            const tabs = await browser.tabs.query({});
+            for (let t of tabs) {
+              browser.tabs.sendMessage(t.id, { type: "NIGHT_WARNING", level: 4 }).catch(() => null);
+            }
+          } catch (e) { }
+        }
+      } else if (state.active && state.nightWarningsEnabled) {
+        const wTime = state.nightWarningTime || "23:00";
+        if (currentHHMM === wTime) {
+          notify("StudyLock", "🌙 It's getting late. Consider wrapping up.");
+          try {
+            const tabs = await browser.tabs.query({});
+            for (let t of tabs) browser.tabs.sendMessage(t.id, { type: "NIGHT_WARNING", level: 1 }).catch(() => null);
+          } catch (e) { }
+        } else if (currentHHMM === addMinutes(wTime, 30)) {
+          try {
+            const tabs = await browser.tabs.query({});
+            for (let t of tabs) browser.tabs.sendMessage(t.id, { type: "NIGHT_WARNING", level: 2 }).catch(() => null);
+          } catch (e) { }
+        } else if (currentHHMM === addMinutes(wTime, 90)) {
+          try {
+            const tabs = await browser.tabs.query({});
+            for (let t of tabs) browser.tabs.sendMessage(t.id, { type: "NIGHT_WARNING", level: 3 }).catch(() => null);
+          } catch (e) { }
+
+          if (state.nightTelegramEnabled && state.telegramToken && state.telegramChatId) {
+            const apiUrl = `https://api.telegram.org/bot${state.telegramToken}/sendMessage`;
+            fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: state.telegramChatId, text: "🌙 Alert: Student is still studying at warning level 3. Consider checking on them." })
+            }).catch(() => null);
+          }
+        }
+      }
+      break;
+    }
+  }
+});
+
+browser.alarms.create("studylock-minute-tick", { periodInMinutes: 1 });
+
+// Notifications Button Handler
+browser.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
+  if (notifId === "studylock-goal-check") {
+    const { dailyGoal, goalsHistory = [] } = await loadState();
+    if (dailyGoal) {
+      dailyGoal.completed = (btnIdx === 0);
+
+      // Update history if today exists
+      const hIdx = goalsHistory.findIndex(g => g.date === dailyGoal.date);
+      if (hIdx >= 0) {
+        goalsHistory[hIdx] = dailyGoal;
+      } else {
+        goalsHistory.push(dailyGoal);
+      }
+
+      await saveState({ dailyGoal, goalsHistory });
     }
   }
 });
@@ -1018,6 +1340,22 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           break;
         }
 
+        // ── GOAL_CREATED ──────────────────────────────────────────────────
+        case "GOAL_CREATED": {
+          const { goalsHistory = [] } = await loadState();
+          const goal = msg.goal;
+          // check if today's goal already exists in history (shouldn't usually)
+          const hIdx = goalsHistory.findIndex(g => g.date === goal.date);
+          if (hIdx >= 0) {
+            goalsHistory[hIdx] = goal;
+          } else {
+            goalsHistory.push(goal);
+          }
+          await saveState({ dailyGoal: goal, goalsHistory });
+          sendResponse({ ok: true });
+          break;
+        }
+
         // ── Session control ───────────────────────────────────────────────
         case "START_SESSION": {
           const wl = Array.isArray(msg.whitelist) ? msg.whitelist : [];
@@ -1032,6 +1370,23 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           await endSession("manual");
           sendResponse({ ok: true });
           break;
+
+        case "START_SMART_BREAK": {
+          const { active, startTime, smartBreaksCount = 0, smartBreaksTotalMins = 0 } = await loadState();
+          if (!active) { sendResponse({ ok: false }); break; }
+          const duration = msg.duration || 5;
+          const studyTimeBeforeBreak = Math.round((Date.now() - startTime) / 60000);
+
+          await saveState({
+            smartBreakActive: true,
+            smartBreaksCount: smartBreaksCount + 1,
+            smartBreaksTotalMins: smartBreaksTotalMins + studyTimeBeforeBreak
+          });
+
+          browser.alarms.create("studylock-smart-break-end", { delayInMinutes: duration });
+          sendResponse({ ok: true });
+          break;
+        }
 
         // ── Whitelist CRUD ────────────────────────────────────────────────
         case "ADD_DOMAIN": {
@@ -1059,6 +1414,44 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         case "GET_WHITELIST": {
           const { whitelist } = await loadState();
           sendResponse({ whitelist });
+          break;
+        }
+
+        // ── Telegram Settings ─────────────────────────────────────────────
+        case "UPDATE_TELEGRAM": {
+          await saveState({
+            telegramAlertsEnabled: msg.enabled,
+            telegramToken: msg.token || "",
+            telegramChatId: msg.chatId || ""
+          });
+          sendResponse({ ok: true });
+          break;
+        }
+
+        case "TEST_TELEGRAM": {
+          const { telegramToken, telegramChatId } = await loadState();
+          if (!telegramToken || !telegramChatId) {
+            sendResponse({ ok: false, error: "Settings incomplete" });
+            break;
+          }
+          const apiUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
+          try {
+            const res = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: telegramChatId,
+                text: "🔔 StudyLock: This is a test alert! Your Telegram integration is working."
+              })
+            });
+            if (res.ok) {
+              sendResponse({ ok: true });
+            } else {
+              sendResponse({ ok: false, error: "Telegram API rejected the request." });
+            }
+          } catch (err) {
+            sendResponse({ ok: false, error: err.message });
+          }
           break;
         }
 
@@ -1113,6 +1506,13 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           sendResponse({ ok: true, logs: sorted });
           break;
         }
+
+        // ── Settings ───────────────────────────────────────────────────────
+        case "UPDATE_NIGHT_SETTINGS":
+        case "UPDATE_PARENTAL_CONTROLS":
+          await saveState(msg.settings);
+          sendResponse({ ok: true });
+          break;
 
         // ── Unknown ───────────────────────────────────────────────────────
         default:

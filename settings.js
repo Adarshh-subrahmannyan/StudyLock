@@ -255,7 +255,7 @@ async function initSettingsScreen() {
     try {
         state = await browser.runtime.sendMessage({ type: "GET_STATE" });
     } catch (_) {
-        state = { whitelist: [], allowedYouTubeChannels: [] };
+        state = { whitelist: [], allowedYouTubeChannels: [], telegramAlertsEnabled: false, telegramToken: "", telegramChatId: "" };
     }
 
     let whitelist = state.whitelist || [];
@@ -375,6 +375,125 @@ async function initSettingsScreen() {
             setMsg(pcMsg, "");
             pinChangeForm.classList.remove("open");
         }, 1800);
+    };
+
+    // ── Telegram Alerts ───────────────────────────────────────────────────
+    const tgToggle = document.getElementById("tg-enable-toggle");
+    const tgTokenInput = document.getElementById("tg-token-input");
+    const tgChatIdInput = document.getElementById("tg-chatid-input");
+    const tgMsg = document.getElementById("tg-msg");
+
+    tgToggle.checked = state.telegramAlertsEnabled === true;
+    tgTokenInput.value = state.telegramToken || "";
+    tgChatIdInput.value = state.telegramChatId || "";
+
+    document.getElementById("btn-tg-save").onclick = async () => {
+        const enabled = tgToggle.checked;
+        const token = tgTokenInput.value.trim();
+        const chatId = tgChatIdInput.value.trim();
+
+        if (enabled && (!token || !chatId)) {
+            setMsg(tgMsg, "Please provide Token and Chat ID to enable alerts.", "error");
+            return;
+        }
+
+        try {
+            await browser.runtime.sendMessage({
+                type: "UPDATE_TELEGRAM",
+                enabled, token, chatId
+            });
+            setMsg(tgMsg, "✓ Telegram settings saved!", "ok");
+            setTimeout(() => setMsg(tgMsg, ""), 2500);
+        } catch (err) {
+            setMsg(tgMsg, "Error saving settings.", "error");
+        }
+    };
+
+    document.getElementById("btn-tg-test").onclick = async () => {
+        setMsg(tgMsg, "Sending test alert...");
+
+        // Also save latest fields first before testing
+        const enabled = tgToggle.checked;
+        const token = tgTokenInput.value.trim();
+        const chatId = tgChatIdInput.value.trim();
+        await browser.runtime.sendMessage({ type: "UPDATE_TELEGRAM", enabled, token, chatId });
+
+        if (!token || !chatId) {
+            setMsg(tgMsg, "Please provide Token and Chat ID to test.", "error");
+            return;
+        }
+
+        try {
+            const r = await browser.runtime.sendMessage({ type: "TEST_TELEGRAM" });
+            if (r && r.ok) {
+                setMsg(tgMsg, "✓ Test alert sent successfully!", "ok");
+            } else {
+                setMsg(tgMsg, "Failed: " + (r.error || "Check your credentials"), "error");
+            }
+        } catch (err) {
+            setMsg(tgMsg, "Error sending test alert.", "error");
+        }
+        setTimeout(() => setMsg(tgMsg, ""), 4000);
+    };
+
+    // ── Night Study Warnings ───────────────────────────────────────────────
+    const nwEnable = document.getElementById("nw-enable");
+    const nwTime = document.getElementById("nw-time");
+    const nwForceEnable = document.getElementById("nw-force-enable");
+    const nwForceTime = document.getElementById("nw-force-time");
+    const nwTelegramEnable = document.getElementById("nw-telegram-enable");
+    const nwMsg = document.getElementById("nw-msg");
+
+    nwEnable.checked = state.nightWarningsEnabled !== false; // default true
+    nwTime.value = state.nightWarningTime || "23:00";
+    nwForceEnable.checked = state.nightForceEndEnabled === true;
+    nwForceTime.value = state.nightForceEndTime || "01:00";
+    nwTelegramEnable.checked = state.nightTelegramEnabled === true;
+
+    document.getElementById("btn-nw-save").onclick = async () => {
+        try {
+            await browser.runtime.sendMessage({
+                type: "UPDATE_NIGHT_SETTINGS",
+                settings: {
+                    nightWarningsEnabled: nwEnable.checked,
+                    nightWarningTime: nwTime.value,
+                    nightForceEndEnabled: nwForceEnable.checked,
+                    nightForceEndTime: nwForceTime.value,
+                    nightTelegramEnabled: nwTelegramEnable.checked
+                }
+            });
+            setMsg(nwMsg, "✓ Night settings saved!", "ok");
+            setTimeout(() => setMsg(nwMsg, ""), 2500);
+        } catch (err) {
+            setMsg(nwMsg, "Error saving settings.", "error");
+        }
+    };
+
+    // ── Parental Controls ──────────────────────────────────────────────────
+    const pcStrictEnable = document.getElementById("pc-strict-enable");
+    const pcStartEnable = document.getElementById("pc-start-enable");
+    const pcEndEnable = document.getElementById("pc-end-enable");
+    const pcMsg = document.getElementById("pc-msg");
+
+    pcStrictEnable.checked = state.strictLockdownEnabled === true;
+    pcStartEnable.checked = state.sessionStartTelegram === true;
+    pcEndEnable.checked = state.sessionEndTelegram === true;
+
+    document.getElementById("btn-pc-save").onclick = async () => {
+        try {
+            await browser.runtime.sendMessage({
+                type: "UPDATE_PARENTAL_CONTROLS",
+                settings: {
+                    strictLockdownEnabled: pcStrictEnable.checked,
+                    sessionStartTelegram: pcStartEnable.checked,
+                    sessionEndTelegram: pcEndEnable.checked
+                }
+            });
+            setMsg(pcMsg, "✓ Parental controls saved!", "ok");
+            setTimeout(() => setMsg(pcMsg, ""), 2500);
+        } catch (err) {
+            setMsg(pcMsg, "Error saving settings.", "error");
+        }
     };
 
     // ── Danger zone ───────────────────────────────────────────────────────

@@ -485,6 +485,19 @@ pinBtnCancel.addEventListener("click", () => {
 });
 
 // ─── Pomodoro toggle ──────────────────────────────────────────────────────────
+document.getElementById("btn-edit-goal").addEventListener("click", async () => {
+    try {
+        await browser.windows.create({
+            url: browser.runtime.getURL("goal.html"),
+            type: "popup",
+            width: 440,
+            height: 600
+        });
+    } catch (err) {
+        browser.tabs.create({ url: browser.runtime.getURL("goal.html") });
+    }
+});
+
 btnPomo.addEventListener("click", () => {
     if (sessionActive) return;   // locked during session
     pomodoroEnabled = !pomodoroEnabled;
@@ -560,21 +573,47 @@ btnSettings.addEventListener("click", async () => {
     // Restore active session if any
     try {
         const state = await browser.runtime.sendMessage({ type: "GET_STATE" });
-        if (state && state.active) {
-            selectedMinutes = state.duration || 25;
-            sessionDuration = selectedMinutes * 60;
-            sessionElapsed = state.elapsed || 0;
-            pomodoroEnabled = state.pomodoroEnabled || false;
-            btnPomo.classList.toggle("on", pomodoroEnabled);
-            const phase = state.pomodoroPhase || "study";
-            // Prefer phaseRemainSec (pomo countdown) when available
-            const remaining = pomodoroEnabled && state.phaseRemainSec !== null
-                ? state.phaseRemainSec
-                : Math.max(0, sessionDuration - sessionElapsed);
-            applyActiveUI(true, phase);
-            renderTime(remaining);
-            setProgress(sessionElapsed / sessionDuration);
-            startTicking();
+        if (state) {
+            // Show daily goal if set
+            if (state.dailyGoal) {
+                const todayStr = (new Date()).toISOString().split("T")[0];
+                if (state.dailyGoal.date === todayStr) {
+                    const wrap = document.getElementById("goal-card-wrap");
+                    const subj = document.getElementById("goal-subject");
+                    const text = document.getElementById("goal-text");
+                    const stat = document.getElementById("goal-status");
+
+                    if (wrap && text) {
+                        wrap.style.display = "block";
+                        subj.textContent = `· ${state.dailyGoal.subject} (${state.dailyGoal.targetHours}h)`;
+                        text.textContent = state.dailyGoal.goalText;
+                        if (state.dailyGoal.completed) {
+                            stat.textContent = "✅ Done";
+                            stat.style.background = "rgba(34, 211, 165, 0.15)";
+                            stat.style.color = "#22d3a5";
+                        } else {
+                            stat.textContent = "⌛ Pending";
+                        }
+                    }
+                }
+            }
+
+            if (state.active) {
+                selectedMinutes = state.duration || 25;
+                sessionDuration = selectedMinutes * 60;
+                sessionElapsed = state.elapsed || 0;
+                pomodoroEnabled = state.pomodoroEnabled || false;
+                btnPomo.classList.toggle("on", pomodoroEnabled);
+                const phase = state.pomodoroPhase || "study";
+                // Prefer phaseRemainSec (pomo countdown) when available
+                const remaining = pomodoroEnabled && state.phaseRemainSec !== null
+                    ? state.phaseRemainSec
+                    : Math.max(0, sessionDuration - sessionElapsed);
+                applyActiveUI(true, phase);
+                renderTime(remaining);
+                setProgress(sessionElapsed / sessionDuration);
+                startTicking();
+            }
         }
     } catch (_) { }
 })();
